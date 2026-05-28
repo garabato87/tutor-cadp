@@ -94,6 +94,35 @@ begin
 end;`,
         notasCatedra: 'El for llega hasta dL-1 (no hasta dL) porque el último elemento ya fue copiado al anterior. Después de eliminar, el valor "viejo" en a[dL+1] queda ahí pero es irrelevante porque dimL ya se decrementó.',
       },
+      {
+        id: 'mb-arr-5',
+        titulo: '5. Recorrer y procesar (sumar, contar, máximo)',
+        teoria: [
+          'Para procesar todo el vector se usa un for i := 1 to dL (NUNCA to fisica — habría basura).',
+          'Sumar/promediar: acumular en una variable que arranca en 0; el promedio es suma / dL (cuidado con dL = 0).',
+          'Contar bajo condición: incrementar un contador solo cuando se cumple el if dentro del for.',
+          'Máximo/mínimo: inicializar el candidato con a[1] (el primer elemento), NO con 0 — si todos son negativos, 0 daría mal.',
+          'Estos recorridos van por VALOR (sin var) porque solo LEEN el vector, no lo modifican.',
+        ],
+        ejemplo: `function sumar(a: numeros; dL: integer): integer;
+var i, suma: integer;
+begin
+  suma := 0;
+  for i := 1 to dL do
+    suma := suma + a[i];
+  sumar := suma;
+end;
+
+function maximo(a: numeros; dL: integer): integer;
+var i, may: integer;
+begin
+  may := a[1];                 { candidato inicial: el primero }
+  for i := 2 to dL do          { comparar desde el segundo }
+    if (a[i] > may) then may := a[i];
+  maximo := may;
+end;`,
+        notasCatedra: 'Inicializar el máximo con a[1], no con 0. El for del máximo empieza en 2 (el 1 ya es el candidato). Para contar pares: if (a[i] mod 2 = 0) then cont := cont + 1. Siempre recorrer hasta dL, nunca hasta fisica.',
+      },
     ],
     miniTest: [
       {
@@ -126,6 +155,30 @@ end;`,
         ],
         correcta: 0,
         explicacion: '(dL + 1) <= fisica verifica que después de incrementar dimL, la nueva posición sea un índice válido del array. Es la forma explícita que usa la cátedra.',
+      },
+      {
+        id: 'mt-arr-4',
+        pregunta: 'Para buscar el máximo de un vector de enteros, ¿con qué valor conviene inicializar la variable "may"?',
+        opciones: [
+          'Con a[1] (el primer elemento del vector)',
+          'Con 0',
+          'Con fisica',
+          'Con el número más grande posible (maxint)',
+        ],
+        correcta: 0,
+        explicacion: 'Se inicializa con a[1] y se recorre desde i := 2. Inicializar con 0 falla si todos los elementos son negativos (devolvería 0, que no está en el vector). Inicializar con maxint sirve para el mínimo, no para el máximo.',
+      },
+      {
+        id: 'mt-arr-5',
+        pregunta: 'Al recorrer un vector con for, ¿hasta qué límite hay que iterar?',
+        opciones: [
+          'Hasta dL (la dimensión lógica)',
+          'Hasta fisica (la dimensión física)',
+          'Hasta fisica - 1',
+          'Hasta dL + 1',
+        ],
+        correcta: 0,
+        explicacion: 'Siempre hasta dL. Iterar hasta fisica leería posiciones que todavía no tienen datos cargados (basura de memoria), porque dimL marca cuántos elementos hay realmente.',
       },
     ],
   },
@@ -204,6 +257,39 @@ begin
 end;`,
         notasCatedra: 'REQUIERE vector ordenado. El div es división entera. Recalcular medio DENTRO del while después de actualizar pri o ult. La condición final verifica tanto que el rango sea válido como que el valor coincida.',
       },
+      {
+        id: 'mb-bsq-4',
+        titulo: '4. Buscar y retornar la posición (no solo true/false)',
+        teoria: [
+          'A veces la cátedra pide la POSICIÓN del elemento, no un boolean. La estructura del while es idéntica.',
+          'Convención: si el valor NO está, la función retorna -1 (o 0). Si está, retorna pos.',
+          'Esto es muy útil antes de eliminar: primero buscás la posición, después llamás a eliminar(a, dL, pude, pos).',
+          'El while sigue siendo (pos <= dL) and (not esta) — el orden importa igual que siempre.',
+          'Sirve también para CONTAR ocurrencias: en vez de parar al encontrar, seguir y sumar un contador.',
+        ],
+        ejemplo: `function posicion(a: numeros; dL: integer; valor: integer): integer;
+var pos: integer; esta: boolean;
+begin
+  esta := false;
+  pos := 1;
+  while (pos <= dL) and (not esta) do
+    if (a[pos] = valor) then esta := true
+    else pos := pos + 1;
+  if esta then posicion := pos
+  else posicion := -1;        { convencion: -1 = no encontrado }
+end;
+
+{ Contar cuantas veces aparece un valor: }
+function contar(a: numeros; dL: integer; valor: integer): integer;
+var i, cont: integer;
+begin
+  cont := 0;
+  for i := 1 to dL do
+    if (a[i] = valor) then cont := cont + 1;
+  contar := cont;
+end;`,
+        notasCatedra: 'Buscar la posición es el paso previo típico para eliminar o modificar. Para CONTAR no se usa bandera: se recorre TODO el vector con un for, porque puede haber varias ocurrencias.',
+      },
     ],
     miniTest: [
       {
@@ -241,6 +327,30 @@ end;`,
         ],
         correcta: 0,
         explicacion: 'La búsqueda con bandera (desordenada) funciona en cualquier vector. La mejorada y la dicotómica REQUIEREN orden ascendente para funcionar correctamente.',
+      },
+      {
+        id: 'mt-bsq-4',
+        pregunta: 'Si una función de búsqueda debe retornar la POSICIÓN y el valor no está, ¿qué se suele retornar?',
+        opciones: [
+          '-1 (un valor imposible como posición, indica "no encontrado")',
+          'dL + 1',
+          '0 siempre es una posición válida',
+          'Se produce un error de ejecución',
+        ],
+        correcta: 0,
+        explicacion: 'Por convención se retorna -1 (o 0 si el array empieza en 1) porque nunca es un índice válido. Así el llamador sabe que no se encontró y no intenta acceder a a[-1].',
+      },
+      {
+        id: 'mt-bsq-5',
+        pregunta: 'Para CONTAR cuántas veces aparece un valor en un vector desordenado, ¿qué estructura conviene?',
+        opciones: [
+          'Un for que recorre TODO el vector sumando un contador',
+          'Un while con bandera que para al encontrar la primera ocurrencia',
+          'Una búsqueda dicotómica',
+          'Una búsqueda mejorada que para cuando a[pos] > valor',
+        ],
+        correcta: 0,
+        explicacion: 'Para contar hay que mirar TODOS los elementos, así que se usa un for de 1 a dL sin bandera. La bandera sirve para detenerse en la primera coincidencia, lo cual no sirve si querés contar todas.',
       },
     ],
   },
@@ -332,6 +442,29 @@ Begin
 End.`,
         notasCatedra: 'En los ejercicios de la cátedra siempre hay que: (1) calcular bytes estáticos de cada var, (2) calcular bytes dinámicos de cada new, (3) rastrear cómo cambia la memoria en cada punto marcado del programa.',
       },
+      {
+        id: 'mb-ptr-4',
+        titulo: '4. Errores clásicos con punteros',
+        teoria: [
+          'ERROR 1 — usar p^ ANTES de new(p): p no apunta a memoria válida → error de ejecución (no de compilación).',
+          'ERROR 2 — usar p^ DESPUÉS de dispose(p): la memoria fue liberada, p queda "colgado" (dangling pointer).',
+          'ERROR 3 — perder la referencia sin dispose: p := nil o p := otro sin liberar antes = memory leak.',
+          'ERROR 4 — comparar p^ cuando p = nil: nil^ no existe. Siempre verificar if (p <> nil) antes de p^.',
+          'BUENA PRÁCTICA: el ciclo de vida correcto es new(p) → usar p^ → dispose(p) → p := nil.',
+        ],
+        ejemplo: `var p: ^integer;
+begin
+  { MAL: p^ := 5;        <- p todavia no apunta a nada (basura) }
+  new(p);                { reserva memoria }
+  p^ := 5;               { OK: ahora si se puede usar p^ }
+  writeln(p^);           { imprime 5 }
+  dispose(p);            { libera la memoria }
+  { MAL: writeln(p^);    <- p quedo colgado, la memoria ya no es valida }
+  p := nil;              { buena practica: marca que no apunta a nada }
+  { MAL: writeln(p^);    <- nil^ no existe, error }
+end.`,
+        notasCatedra: '⚠ La cátedra adora el ejemplo: new(pc); pc^ := texto; dispose(pc); writeln(pc^). Es ERROR EN EJECUCIÓN (no compila mal): se accede a memoria ya liberada. Compila bien porque la sintaxis es correcta; falla al correr.',
+      },
     ],
     miniTest: [
       {
@@ -369,6 +502,30 @@ End.`,
         ],
         correcta: 0,
         explicacion: 'codigo: integer = 2 bytes. nombre: string[20] = 20+1 = 21 bytes. precio: real = 4 bytes. Total = 2 + 21 + 4 = 27 bytes. Un record ocupa la SUMA de sus campos.',
+      },
+      {
+        id: 'mt-ptr-4',
+        pregunta: '¿Qué tipo de error es: new(pc); pc^ := \'hola\'; dispose(pc); writeln(pc^); ?',
+        opciones: [
+          'Error de EJECUCIÓN: se accede a memoria ya liberada (compila bien)',
+          'Error de COMPILACIÓN: la sintaxis es inválida',
+          'No es un error, imprime "hola" igual',
+          'Error de compilación porque falta el new',
+        ],
+        correcta: 0,
+        explicacion: 'La sintaxis es correcta, así que COMPILA. Pero al ejecutar, writeln(pc^) accede a memoria que dispose ya liberó (puntero colgado). Es un error de ejecución, no de compilación.',
+      },
+      {
+        id: 'mt-ptr-5',
+        pregunta: 'Antes de acceder a p^, ¿qué conviene verificar para evitar un error?',
+        opciones: [
+          'Que p <> nil (que p apunte a memoria válida)',
+          'Que sizeof(p) sea 4',
+          'Que p^ no esté vacío',
+          'Nada, p^ siempre es seguro',
+        ],
+        correcta: 0,
+        explicacion: 'Acceder a nil^ (cuando p = nil) o a un puntero sin new produce un error de ejecución. La defensa es if (p <> nil) then ... antes de tocar p^.',
       },
     ],
   },
@@ -480,6 +637,38 @@ begin
 end;`,
         notasCatedra: 'La cátedra pide conocer AMBAS opciones. La condición del while en opción 1 es aux^.sig <> nil (no aux <> nil) — así aux queda EN el último nodo, no después.',
       },
+      {
+        id: 'mb-lst-5',
+        titulo: '5. Buscar, contar y procesar nodos',
+        teoria: [
+          'Buscar en lista: recorrer con aux y bandera, while (aux <> nil) and (not esta). Igual que en arreglos pero avanzando con aux^.sig.',
+          'Para buscar se retorna boolean (o el puntero al nodo). La lista NO necesita estar ordenada.',
+          'Contar nodos: recorrer toda la lista con aux sumando 1 por nodo (no hay "dimL" en listas).',
+          'Sumar/promediar: acumular aux^.elem en cada paso del recorrido.',
+          'Estos módulos van por VALOR (sin var): solo leen, no cambian la estructura de la lista.',
+        ],
+        ejemplo: `function buscar(pI: listaE; valor: integer): boolean;
+var aux: listaE; esta: boolean;
+begin
+  aux := pI; esta := false;
+  while (aux <> nil) and (not esta) do
+    if (aux^.elem = valor) then esta := true
+    else aux := aux^.sig;
+  buscar := esta;
+end;
+
+function contar(pI: listaE): integer;
+var aux: listaE; cont: integer;
+begin
+  aux := pI; cont := 0;
+  while (aux <> nil) do begin
+    cont := cont + 1;
+    aux := aux^.sig;
+  end;
+  contar := cont;
+end;`,
+        notasCatedra: 'En el buscar con bandera, OJO: el avance aux := aux^.sig va en el else, igual que en arreglos. Si encontraste (esta := true), no avanzás, porque querés quedarte en ese nodo. El orden del while también importa: (aux <> nil) primero.',
+      },
     ],
     miniTest: [
       {
@@ -512,6 +701,30 @@ end;`,
         ],
         correcta: 0,
         explicacion: 'La condición aux^.sig <> nil hace que aux se detenga EN el último nodo (cuyo .sig = nil). Si fuera aux <> nil, aux avanzaría hasta nil y no podría hacer aux^.sig := nuevo (nil^.sig es un error).',
+      },
+      {
+        id: 'mt-lst-4',
+        pregunta: 'Para contar la cantidad de nodos de una lista, ¿cómo se recorre?',
+        opciones: [
+          'while (aux <> nil): sumar 1 y avanzar aux := aux^.sig',
+          'for i := 1 to dL (la lista tiene dimL como los arreglos)',
+          'while (aux^.sig <> nil): contar hasta el anteúltimo',
+          'Se usa sizeof(pI) que da la cantidad de nodos',
+        ],
+        correcta: 0,
+        explicacion: 'Las listas no tienen dimensión lógica como los arreglos: hay que recorrer nodo por nodo con aux hasta nil, sumando 1 cada vez. sizeof(pI) da 4 (es un puntero), no la cantidad de nodos.',
+      },
+      {
+        id: 'mt-lst-5',
+        pregunta: 'En la función buscar de una lista, ¿dónde va el avance aux := aux^.sig?',
+        opciones: [
+          'En el else (solo se avanza si NO se encontró)',
+          'Siempre, antes del if',
+          'Después de poner esta := true',
+          'No hace falta avanzar',
+        ],
+        correcta: 0,
+        explicacion: 'El avance va en el else: si encontraste el valor (esta := true) no querés avanzar, querés quedarte en ese nodo. Es la misma estructura que la búsqueda con bandera en arreglos.',
       },
     ],
   },
@@ -588,6 +801,37 @@ begin
 end;`,
         notasCatedra: 'La UNIFICACIÓN de casos 3 y 4 es la elegancia que muestra la cátedra. En caso 4, actual = nil, y hacer nuevo^.sig := nil es exactamente lo correcto para el último nodo de la lista.',
       },
+      {
+        id: 'mb-lsta-3',
+        titulo: '3. Eliminar TODAS las ocurrencias + máximo de la lista',
+        teoria: [
+          'Eliminar TODAS las apariciones: cuando se elimina un nodo, actual ya quedó "fuera"; NO hay que avanzar actual, porque ant^.sig ahora apunta al siguiente.',
+          'Truco: usar un puntero aux para el dispose y mover actual al siguiente ANTES de liberar.',
+          'Máximo de la lista: inicializar may := pI^.elem (el primero) y recorrer con aux desde el segundo nodo.',
+          'CUIDADO: si la lista está vacía (pI = nil), no se puede acceder a pI^.elem. Verificar primero.',
+          'Toda operación que cambia la ESTRUCTURA (eliminar) recibe la lista por var; las que solo leen, por valor.',
+        ],
+        ejemplo: `procedure eliminarTodos(var pI: listaE; valor: integer);
+var actual, ant, aux: listaE;
+begin
+  while (pI <> nil) and (pI^.elem = valor) do begin  { saca del frente }
+    aux := pI; pI := pI^.sig; dispose(aux);
+  end;
+  actual := pI; ant := pI;
+  while (actual <> nil) do begin
+    if (actual^.elem = valor) then begin
+      ant^.sig := actual^.sig;       { desconecta }
+      aux := actual;
+      actual := actual^.sig;         { avanza ANTES de liberar }
+      dispose(aux);
+    end else begin
+      ant := actual;
+      actual := actual^.sig;
+    end;
+  end;
+end;`,
+        notasCatedra: 'Eliminar todas las ocurrencias combina dos partes: (1) sacar del frente todos los nodos iguales al valor, (2) recorrer el resto con actual/ant. La clave es NO avanzar actual cuando se elimina, salvo que se guarde aux y se avance antes del dispose.',
+      },
     ],
     miniTest: [
       {
@@ -625,6 +869,30 @@ end;`,
         ],
         correcta: 0,
         explicacion: 'dispose(actual) libera los bytes de memoria dinámica reservados con new() al crear ese nodo. La desconexión de la lista (modificar .sig) ya se hizo ANTES del dispose. Son dos cosas distintas.',
+      },
+      {
+        id: 'mt-lsta-4',
+        pregunta: 'Al eliminar TODAS las ocurrencias de un valor, ¿por qué NO se avanza actual cuando se elimina un nodo?',
+        opciones: [
+          'Porque tras desconectar, ant^.sig ya apunta al siguiente que hay que revisar',
+          'Porque actual queda en nil automáticamente',
+          'Porque siempre hay una sola ocurrencia',
+          'Sí se avanza siempre, en todos los casos',
+        ],
+        correcta: 0,
+        explicacion: 'Al hacer ant^.sig := actual^.sig se "saltea" el nodo eliminado. El siguiente nodo a revisar es ese al que ahora apunta ant^.sig. Si avanzaras actual igual, te saltearías un nodo que podría también tener el valor.',
+      },
+      {
+        id: 'mt-lsta-5',
+        pregunta: 'Para calcular el máximo de una lista, ¿con qué se inicializa "may" y qué hay que cuidar?',
+        opciones: [
+          'Con pI^.elem, cuidando que la lista no esté vacía (pI <> nil)',
+          'Con 0, sin más cuidados',
+          'Con nil',
+          'Con el último nodo de la lista',
+        ],
+        correcta: 0,
+        explicacion: 'Se inicializa con el primer elemento (pI^.elem) y se recorre el resto. Pero si pI = nil (lista vacía), acceder a pI^.elem es un error: hay que verificar antes. Inicializar con 0 falla con valores negativos.',
       },
     ],
   },
@@ -803,6 +1071,52 @@ end.`,
     retoExtra: 'Modificar el programa para que, en vez de insertar en posición 4, inserte el nombre en orden alfabético ascendente usando la plantilla de insertar ordenado.',
   },
 
+  {
+    id: 'ej-arr-4',
+    subhabilidadId: 'arreglos-base',
+    nivel: 1,
+    titulo: 'Recorrer: suma, promedio y máximo',
+    enunciado: `Dado un vector de enteros ya cargado (con su dimL), implementar
+TRES módulos que solo LEEN el vector (por valor):
+
+a) sumarTodos(v, dL): integer  -> suma de todos los elementos
+b) promedio(v, dL): real       -> promedio (cuidado si dL = 0)
+c) maximo(v, dL): integer      -> el mayor elemento
+
+const fisica = 100;
+type vent = array[1..fisica] of integer;
+
+{ ... completar los tres módulos ... }`,
+    pista: 'Suma: acumulador en 0 y for de 1 a dL. Promedio: suma / dL, pero si dL = 0 retornar 0 para no dividir por cero. Máximo: inicializar may := v[1] y comparar desde i := 2.',
+    solucion: `const fisica = 100;
+type vent = array[1..fisica] of integer;
+
+function sumarTodos(v: vent; dL: integer): integer;
+var i, s: integer;
+begin
+  s := 0;
+  for i := 1 to dL do
+    s := s + v[i];
+  sumarTodos := s;
+end;
+
+function promedio(v: vent; dL: integer): real;
+begin
+  if (dL = 0) then promedio := 0
+  else promedio := sumarTodos(v, dL) / dL;
+end;
+
+function maximo(v: vent; dL: integer): integer;
+var i, may: integer;
+begin
+  may := v[1];
+  for i := 2 to dL do
+    if (v[i] > may) then may := v[i];
+  maximo := may;
+end;`,
+    retoExtra: 'Agregar contarPares(v, dL): integer que cuente cuántos elementos son pares. Pista: if (v[i] mod 2 = 0).',
+  },
+
   // ─── ARREGLOS BÚSQUEDAS ──────────────────────────────────────────
   {
     id: 'ej-bsq-1',
@@ -903,6 +1217,63 @@ begin
   dicotomica := ok;
 end;`,
     retoExtra: 'Trazar en papel la búsqueda del valor 7 en el vector [1, 3, 5, 7, 9, 11, 13]. Indicar los valores de pri, ult y medio en cada iteración.',
+  },
+
+  {
+    id: 'ej-bsq-4',
+    subhabilidadId: 'arreglos-busquedas',
+    nivel: 2,
+    titulo: 'Buscar posición y eliminar esa ocurrencia',
+    enunciado: `Dado un vector de enteros y un valor leído por teclado:
+1. Buscar la POSICIÓN del valor (función que retorna -1 si no está).
+2. Si está, eliminarlo usando el procedure eliminar de la cátedra.
+3. Informar el resultado.
+
+Combina búsqueda con bandera + eliminar (con desplazamiento "to").
+
+const fisica = 500;
+type vent = array[1..fisica] of integer;
+
+{ completar: posicion(...) : integer  y  el programa principal }`,
+    pista: 'posicion usa while (pos <= dL) and (not esta), retorna pos o -1. Luego: si pos <> -1, llamar eliminar(v, dL, pude, pos). Recordá que eliminar desplaza con for i := pos to dL-1.',
+    solucion: `const fisica = 500;
+type vent = array[1..fisica] of integer;
+
+function posicion(a: vent; dL: integer; valor: integer): integer;
+var pos: integer; esta: boolean;
+begin
+  esta := false; pos := 1;
+  while (pos <= dL) and (not esta) do
+    if (a[pos] = valor) then esta := true
+    else pos := pos + 1;
+  if esta then posicion := pos else posicion := -1;
+end;
+
+procedure eliminar(var a: vent; var dL: integer;
+                   var pude: boolean; pos: integer);
+var i: integer;
+begin
+  pude := false;
+  if (pos >= 1) and (pos <= dL) then begin
+    for i := pos to (dL - 1) do a[i] := a[i+1];
+    pude := true; dL := dL - 1;
+  end;
+end;
+
+var v: vent; dL, valor, pos: integer; pude: boolean;
+begin
+  { ... cargar v y dL ... }
+  readln(valor);
+  pos := posicion(v, dL, valor);
+  if (pos = -1) then
+    writeln('El valor no esta en el vector')
+  else begin
+    eliminar(v, dL, pude, pos);
+    if pude then writeln('Eliminado de la posicion ', pos)
+    else writeln('No se pudo eliminar');
+  end;
+end.`,
+    retoExtra: 'Modificar para eliminar TODAS las ocurrencias del valor (no solo la primera). Pista: repetir buscar+eliminar mientras posicion() distinto de -1.',
   },
 
   // ─── PUNTEROS ────────────────────────────────────────────────────
@@ -1059,6 +1430,44 @@ end.`,
     retoExtra: 'Reescribir el programa D para que SÍ funcione (que el segundo writeln imprima "Otro texto"). Solo cambiar la firma del procedimiento.',
   },
 
+  {
+    id: 'ej-ptr-4',
+    subhabilidadId: 'punteros',
+    nivel: 1,
+    titulo: 'Memoria dinámica en cada punto (A, B, C)',
+    enunciado: `Indicar la memoria DINÁMICA reservada en cada punto marcado.
+Se arranca con 0 bytes dinámicos en uso.
+Tabla: real = 4 bytes, puntero = 4 bytes.
+
+Program uno;
+Type puntero = ^real;
+Var p, q: puntero;
+Begin
+  new(p);          { punto A }
+  p^ := 3.14;
+  new(q);          { punto B }
+  dispose(p);      { punto C }
+  p := nil;        { punto D }
+End.
+
+¿Cuántos bytes DINÁMICOS hay en uso en A, B, C y D?
+Justificar especialmente C y D.`,
+    pista: 'new(x) suma sizeof(x^) = 4 bytes (real). dispose libera 4. p := nil NO libera (la memoria de q sigue ahí). Las variables p y q son ESTÁTICAS (4+4), no cuentan como dinámicas.',
+    solucion: `{ Recordar: sizeof(real) = 4. Cada new de un ^real reserva 4 bytes dinamicos. }
+
+{ punto A: despues de new(p)  -> 4 bytes dinamicos (el real de p) }
+{ punto B: despues de new(q)  -> 8 bytes dinamicos (real de p + real de q) }
+{ punto C: despues de dispose(p) -> 4 bytes dinamicos }
+{          (se liberaron los 4 de p; quedan los 4 de q) }
+{ punto D: despues de p := nil -> 4 bytes dinamicos }
+{          (p := nil NO libera memoria; la de q sigue ocupada) }
+
+{ OJO: nunca se hizo dispose(q), asi que al terminar el programa }
+{ quedan 4 bytes sin liberar = MEMORY LEAK. }
+{ Las variables p y q en si son estaticas: 4 + 4 = 8 bytes estaticos. }`,
+    retoExtra: '¿Qué línea habría que agregar antes del End para que NO haya memory leak? ¿En qué punto?',
+  },
+
   // ─── LISTAS BASE ─────────────────────────────────────────────────
   {
     id: 'ej-lst-1',
@@ -1133,6 +1542,77 @@ end;
 { La lista queda: 10 -> 21 -> 13 -> 48 -> nil }
 { (mismo orden que fueron ingresados) }`,
     retoExtra: 'Implementar la opción 2 (con puntero al último). La firma sería: procedure agregarAlFinal2(var pI, pU: lista; num: integer). ¿Por qué la opción 2 es más eficiente?',
+  },
+
+  {
+    id: 'ej-lst-3',
+    subhabilidadId: 'listas-base',
+    nivel: 1,
+    titulo: 'Contar nodos y sumar elementos',
+    enunciado: `Dada una lista de enteros ya armada (pri), implementar:
+
+a) contar(pI): integer  -> cantidad de nodos de la lista
+b) sumar(pI): integer   -> suma de todos los elem
+
+Ambos por VALOR (no modifican la lista).
+
+type listaE = ^datosEnteros;
+     datosEnteros = record elem: integer; sig: listaE; end;
+
+{ ... completar ... }`,
+    pista: 'Recorrer con aux := pI y while (aux <> nil). En contar sumar 1 por nodo; en sumar acumular aux^.elem. Avanzar siempre con aux := aux^.sig. Una lista vacía (pI = nil) da 0 en ambos.',
+    solucion: `function contar(pI: listaE): integer;
+var aux: listaE; cont: integer;
+begin
+  aux := pI; cont := 0;
+  while (aux <> nil) do begin
+    cont := cont + 1;
+    aux := aux^.sig;
+  end;
+  contar := cont;
+end;
+
+function sumar(pI: listaE): integer;
+var aux: listaE; s: integer;
+begin
+  aux := pI; s := 0;
+  while (aux <> nil) do begin
+    s := s + aux^.elem;
+    aux := aux^.sig;
+  end;
+  sumar := s;
+end;`,
+    retoExtra: 'Implementar promedio(pI): real reutilizando contar y sumar. Cuidar el caso lista vacía (no dividir por 0).',
+  },
+  {
+    id: 'ej-lst-4',
+    subhabilidadId: 'listas-base',
+    nivel: 2,
+    titulo: 'Buscar un valor en la lista (con bandera)',
+    enunciado: `Implementar una función que indique si un valor está en la lista.
+La lista NO está ordenada.
+
+function buscar(pI: listaE; valor: integer): boolean;
+
+CRÍTICO: el orden del while y dónde va el avance aux := aux^.sig.
+
+{ ... completar ... }`,
+    pista: 'while (aux <> nil) and (not esta). El avance va en el ELSE: si encontraste, no avanzás. Igual estructura que la búsqueda con bandera de arreglos, pero con punteros.',
+    solucion: `function buscar(pI: listaE; valor: integer): boolean;
+var aux: listaE; esta: boolean;
+begin
+  aux := pI;
+  esta := false;
+  while (aux <> nil) and (not esta) do
+    if (aux^.elem = valor) then
+      esta := true
+    else
+      aux := aux^.sig;
+  buscar := esta;
+end;
+
+{ El orden (aux <> nil) primero evita evaluar aux^.elem cuando aux = nil. }`,
+    retoExtra: 'Modificar para que retorne el puntero al nodo encontrado (o nil si no está). Firma: function buscarNodo(pI: listaE; valor: integer): listaE.',
   },
 
   // ─── LISTAS AVANZADO ─────────────────────────────────────────────
@@ -1216,5 +1696,134 @@ begin
   end;
 end;`,
     retoExtra: 'Trazar en papel la insercion ordenada de los valores 5, 2, 8, 1, 3 (en ese orden). Dibujar la lista despues de cada insercion.',
+  },
+  {
+    id: 'ej-lsta-3',
+    subhabilidadId: 'listas-avanzado',
+    nivel: 3,
+    titulo: 'Eliminar TODAS las ocurrencias de un valor',
+    enunciado: `Implementar un módulo que elimine TODAS las apariciones
+de un valor en la lista (puede haber repetidos, lista desordenada).
+Liberar la memoria de cada nodo eliminado con dispose.
+
+procedure eliminarTodos(var pI: listaE; valor: integer);
+
+OJO: cuando eliminás un nodo NO debés avanzar actual,
+porque ant^.sig ya apunta al siguiente a revisar.
+
+{ ... completar ... }`,
+    pista: 'Primero sacá del FRENTE todos los nodos iguales al valor (while pI <> nil y pI^.elem = valor). Después recorré con actual/ant: si coincide, guardá aux, avanzá actual y dispose(aux); si no, avanzá ant y actual normalmente.',
+    solucion: `procedure eliminarTodos(var pI: listaE; valor: integer);
+var actual, ant, aux: listaE;
+begin
+  { 1) eliminar los del frente }
+  while (pI <> nil) and (pI^.elem = valor) do begin
+    aux := pI;
+    pI := pI^.sig;
+    dispose(aux);
+  end;
+  { 2) recorrer el resto }
+  actual := pI;
+  ant := pI;
+  while (actual <> nil) do begin
+    if (actual^.elem = valor) then begin
+      ant^.sig := actual^.sig;   { desconectar }
+      aux := actual;
+      actual := actual^.sig;     { avanzar ANTES de liberar }
+      dispose(aux);
+    end else begin
+      ant := actual;
+      actual := actual^.sig;
+    end;
+  end;
+end;`,
+    retoExtra: 'Trazar en papel sobre la lista 4→2→4→4→7→4 eliminando el valor 4. ¿Cómo queda? (debe quedar 2→7).',
+  },
+  {
+    id: 'ej-lsta-4',
+    subhabilidadId: 'listas-avanzado',
+    nivel: 3,
+    titulo: 'Proyecto integrador — agenda de nombres ordenada',
+    enunciado: `Programa que combina TODO lo de listas:
+1. Cargar una lista de nombres en ORDEN ALFABÉTICO ascendente
+   (insertar ordenado), leyendo hasta 'ZZZ'.
+2. Leer un nombre: si EXISTE, eliminarlo; si NO existe, insertarlo en orden.
+3. Mostrar la lista final.
+
+Reutilizar: insertar (ordenado), buscar (bandera) y eliminar (3 casos).
+
+type lista = ^nodo;
+     nodo = record nombre: string[30]; sig: lista; end;
+
+{ ... armar el programa principal usando los módulos ... }`,
+    pista: 'El paso 2 es: si buscar(L, n) entonces eliminar(L, n), sino insertar(L, n). Los módulos insertar/eliminar/buscar son los mismos de la teoría pero con string en vez de integer. Comparar strings con <, =, > funciona alfabéticamente en Pascal.',
+    solucion: `type lista = ^nodo;
+     nodo = record nombre: string[30]; sig: lista; end;
+
+procedure insertar(var pI: lista; valor: string);
+var actual, anterior, nuevo: lista;
+begin
+  new(nuevo); nuevo^.nombre := valor; nuevo^.sig := nil;
+  if (pI = nil) then pI := nuevo
+  else begin
+    actual := pI; anterior := pI;
+    while (actual <> nil) and (actual^.nombre < nuevo^.nombre) do begin
+      anterior := actual;
+      actual := actual^.sig;
+    end;
+    if (actual = pI) then begin
+      nuevo^.sig := pI; pI := nuevo;
+    end else begin
+      anterior^.sig := nuevo; nuevo^.sig := actual;
+    end;
+  end;
+end;
+
+function buscar(pI: lista; valor: string): boolean;
+var aux: lista; esta: boolean;
+begin
+  aux := pI; esta := false;
+  while (aux <> nil) and (not esta) do
+    if (aux^.nombre = valor) then esta := true
+    else aux := aux^.sig;
+  buscar := esta;
+end;
+
+procedure eliminar(var pI: lista; valor: string);
+var actual, ant: lista;
+begin
+  actual := pI;
+  while (actual <> nil) and (actual^.nombre <> valor) do begin
+    ant := actual; actual := actual^.sig;
+  end;
+  if (actual <> nil) then begin
+    if (actual = pI) then pI := pI^.sig
+    else ant^.sig := actual^.sig;
+    dispose(actual);
+  end;
+end;
+
+procedure mostrar(pI: lista);
+var aux: lista;
+begin
+  aux := pI;
+  while (aux <> nil) do begin
+    writeln(aux^.nombre); aux := aux^.sig;
+  end;
+end;
+
+var L: lista; s, n: string;
+begin
+  L := nil;
+  readln(s);
+  while (s <> 'ZZZ') do begin
+    insertar(L, s); readln(s);
+  end;
+  readln(n);
+  if buscar(L, n) then eliminar(L, n)
+  else insertar(L, n);
+  mostrar(L);
+end.`,
+    retoExtra: 'Agregar un contador de cuántos nombres tiene la lista al final y mostrarlo. Reutilizar la función contar recorriendo con aux.',
   },
 ]

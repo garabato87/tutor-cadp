@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { SUBHABILIDADES, EJERCICIOS } from './data/curriculum.js'
 import { PLAN_ESTUDIO } from './data/plan.js'
 import { loadProgress, saveProgress, getUserId, setUserId, clearUserId } from './lib/storage.js'
@@ -57,39 +57,82 @@ export default function App() {
     return <LoginView onLogin={handleLogin} />
   }
 
-  const guardar = useCallback((nuevo) => {
-    setProgress(nuevo)
-    saveProgress(nuevo)
-  }, [])
+  // Actualiza el progreso de forma funcional (a partir del estado más reciente)
+  // para no perder escrituras si se hacen varios clics seguidos, y persiste.
+  function actualizarProgreso(mutar) {
+    setProgress(prev => {
+      const next = mutar(prev)
+      saveProgress(next)
+      return next
+    })
+  }
+
+  // Abre el primer microbloque NO leído de una subhabilidad (flujo guiado).
+  function abrirPrimerNoLeido(id) {
+    const sk = SUBHABILIDADES.find(s => s.id === id)
+    if (!sk) return
+    const done = new Set((progress[id]?.microbloquesDone) || [])
+    const siguiente = sk.microbloques.find(mb => !done.has(mb.id)) || sk.microbloques[0]
+    if (siguiente) setMbAbiertos({ [siguiente.id]: true })
+  }
+
+  // Cambia de tema en "Aprender" y abre automáticamente el primer pendiente.
+  function seleccionarSkillAprender(id) {
+    setSkillId(id)
+    abrirPrimerNoLeido(id)
+  }
+
+  // Salta directo a la práctica del tema indicado.
+  function irAPractica(id) {
+    setSkillId(id)
+    setTab('ejercicios')
+  }
 
   function marcarMicrobloque(skillId, mbId) {
-    const p = { ...progress }
-    if (!p[skillId]) p[skillId] = {}
-    const done = new Set(p[skillId].microbloquesDone || [])
-    done.has(mbId) ? done.delete(mbId) : done.add(mbId)
-    p[skillId] = { ...p[skillId], microbloquesDone: [...done] }
-    guardar(p)
+    const yaLeido = (progress[skillId]?.microbloquesDone || []).includes(mbId)
+
+    actualizarProgreso(prev => {
+      const p = { ...prev }
+      const ps = p[skillId] || {}
+      const done = new Set(ps.microbloquesDone || [])
+      yaLeido ? done.delete(mbId) : done.add(mbId)
+      p[skillId] = { ...ps, microbloquesDone: [...done] }
+      return p
+    })
+
+    // Auto-avance (cosmético): al marcar como leído, abrir el siguiente pendiente.
+    if (!yaLeido) {
+      const sk = SUBHABILIDADES.find(s => s.id === skillId)
+      const done = new Set(progress[skillId]?.microbloquesDone || [])
+      done.add(mbId)
+      const siguiente = sk?.microbloques.find(mb => !done.has(mb.id))
+      setMbAbiertos(siguiente ? { [siguiente.id]: true } : {})
+    }
   }
 
   function responderMiniTest(skillId, pregId, correcta) {
-    const p = { ...progress }
-    if (!p[skillId]) p[skillId] = {}
-    p[skillId] = {
-      ...p[skillId],
-      miniTestResults: { ...(p[skillId].miniTestResults || {}), [pregId]: correcta },
-    }
-    guardar(p)
+    actualizarProgreso(prev => {
+      const p = { ...prev }
+      const ps = p[skillId] || {}
+      p[skillId] = {
+        ...ps,
+        miniTestResults: { ...(ps.miniTestResults || {}), [pregId]: correcta },
+      }
+      return p
+    })
   }
 
   function marcarEjercicio(ejId) {
     const ej = EJERCICIOS.find(e => e.id === ejId)
     if (!ej) return
-    const p = { ...progress }
-    if (!p[ej.subhabilidadId]) p[ej.subhabilidadId] = {}
-    const done = new Set(p[ej.subhabilidadId].ejerciciosDone || [])
-    done.add(ejId)
-    p[ej.subhabilidadId] = { ...p[ej.subhabilidadId], ejerciciosDone: [...done] }
-    guardar(p)
+    actualizarProgreso(prev => {
+      const p = { ...prev }
+      const ps = p[ej.subhabilidadId] || {}
+      const done = new Set(ps.ejerciciosDone || [])
+      done.add(ejId)
+      p[ej.subhabilidadId] = { ...ps, ejerciciosDone: [...done] }
+      return p
+    })
   }
 
   function toggleMb(id) {
@@ -133,17 +176,19 @@ export default function App() {
       </div>
 
       <main className="main-content">
-        {tab === 'roadmap' && <RoadmapView progress={progress} onSelectSkill={(id) => { setSkillId(id); setTab('aprender') }} />}
+        {tab === 'roadmap' && <RoadmapView progress={progress} onSelectSkill={(id) => { seleccionarSkillAprender(id); setTab('aprender') }} />}
         {tab === 'aprender' && (
           <AprendizajeView
             skill={skill}
             allSkills={SUBHABILIDADES}
+            ejercicios={EJERCICIOS}
             progress={progress}
             mbAbiertos={mbAbiertos}
             onToggleMb={toggleMb}
             onMarcarMb={marcarMicrobloque}
             onRespuestaMiniTest={responderMiniTest}
-            onSelectSkill={setSkillId}
+            onSelectSkill={seleccionarSkillAprender}
+            onGoToPractice={irAPractica}
           />
         )}
         {tab === 'ejercicios' && (
@@ -154,6 +199,7 @@ export default function App() {
             progress={progress}
             onDone={marcarEjercicio}
             onSelectSkill={setSkillId}
+            onGoToTheory={(id) => { seleccionarSkillAprender(id); setTab('aprender') }}
           />
         )}
         {tab === 'progreso' && <ProgresoView progress={progress} />}
@@ -263,30 +309,70 @@ function RoadmapView({ progress, onSelectSkill }) {
 }
 
 // ─── APRENDIZAJE VIEW ───────────────────────────────────────────────────────
-function AprendizajeView({ skill, allSkills, progress, mbAbiertos, onToggleMb, onMarcarMb, onRespuestaMiniTest, onSelectSkill }) {
+function AprendizajeView({ skill, allSkills, ejercicios, progress, mbAbiertos, onToggleMb, onMarcarMb, onRespuestaMiniTest, onSelectSkill, onGoToPractice }) {
   const p = progress[skill.id] || {}
   const mbDone = new Set(p.microbloquesDone || [])
   const mtResults = p.miniTestResults || {}
 
+  const totalMb = skill.microbloques.length
+  const leidos = skill.microbloques.filter(mb => mbDone.has(mb.id)).length
+  const teoriaPct = totalMb > 0 ? Math.round((leidos / totalMb) * 100) : 0
+  const teoriaCompleta = leidos === totalMb && totalMb > 0
+  const mtRespondidas = skill.miniTest.filter(q => mtResults[q.id] !== undefined).length
+  const numEjercicios = ejercicios.filter(e => e.subhabilidadId === skill.id).length
+
+  const idx = allSkills.findIndex(s => s.id === skill.id)
+  const prevSkill = idx > 0 ? allSkills[idx - 1] : null
+  const nextSkill = idx < allSkills.length - 1 ? allSkills[idx + 1] : null
+
   return (
     <div>
       <div className="skill-tabs">
-        {allSkills.map(s => (
-          <button
-            key={s.id}
-            className={`skill-tab ${s.id === skill.id ? 'active' : ''}`}
-            onClick={() => onSelectSkill(s.id)}
-            style={s.id === skill.id ? { borderColor: s.color, color: s.color } : {}}
-          >
-            {s.icono} {s.titulo}
-          </button>
-        ))}
+        {allSkills.map(s => {
+          const sp = progress[s.id] || {}
+          const done = (sp.microbloquesDone || []).length
+          const completo = done === s.microbloques.length && s.microbloques.length > 0
+          return (
+            <button
+              key={s.id}
+              className={`skill-tab ${s.id === skill.id ? 'active' : ''}`}
+              onClick={() => onSelectSkill(s.id)}
+              style={s.id === skill.id ? { borderColor: s.color, color: s.color } : {}}
+            >
+              {completo ? '✓' : s.icono} {s.titulo}
+            </button>
+          )
+        })}
       </div>
 
       <div className="section-title">{skill.icono} {skill.titulo}</div>
       <div className="section-subtitle">{skill.descripcion}</div>
 
-      {skill.microbloques.map((mb) => {
+      {/* Indicador de avance de teoría */}
+      <div className="teoria-tracker">
+        <div className="teoria-tracker-top">
+          <span>📖 Teoría — <strong>{leidos}/{totalMb}</strong> microbloques leídos</span>
+          <span className="teoria-tracker-pct" style={{ color: skill.color }}>{teoriaPct}%</span>
+        </div>
+        <div className="progress-bar">
+          <div className="progress-bar-fill" style={{ width: `${teoriaPct}%`, background: skill.color }} />
+        </div>
+        <div className="teoria-tracker-steps">
+          {skill.microbloques.map((mb, i) => (
+            <button
+              key={mb.id}
+              className={`step-dot ${mbDone.has(mb.id) ? 'done' : ''} ${mbAbiertos[mb.id] ? 'active' : ''}`}
+              title={mb.titulo}
+              onClick={() => onToggleMb(mb.id)}
+              style={mbDone.has(mb.id) ? { borderColor: skill.color, color: skill.color } : {}}
+            >
+              {mbDone.has(mb.id) ? '✓' : i + 1}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {skill.microbloques.map((mb, i) => {
         const done = mbDone.has(mb.id)
         const abierto = mbAbiertos[mb.id]
         return (
@@ -295,7 +381,7 @@ function AprendizajeView({ skill, allSkills, progress, mbAbiertos, onToggleMb, o
               <span className="microbloque-title">{mb.titulo}</span>
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                 <span className={`microbloque-badge ${done ? 'done' : ''}`}>
-                  {done ? '✓ leído' : 'pendiente'}
+                  {done ? '✓ leído' : `${i + 1}/${totalMb}`}
                 </span>
                 <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{abierto ? '▲' : '▼'}</span>
               </div>
@@ -304,7 +390,7 @@ function AprendizajeView({ skill, allSkills, progress, mbAbiertos, onToggleMb, o
             {abierto && (
               <div className="microbloque-body">
                 <ul className="teoria-list">
-                  {mb.teoria.map((t, i) => <li key={i}>{t}</li>)}
+                  {mb.teoria.map((t, ti) => <li key={ti}>{t}</li>)}
                 </ul>
                 <pre>{mb.ejemplo}</pre>
                 {mb.notasCatedra && (
@@ -317,7 +403,9 @@ function AprendizajeView({ skill, allSkills, progress, mbAbiertos, onToggleMb, o
                     className={`btn ${done ? 'btn-done' : 'btn-primary'}`}
                     onClick={() => onMarcarMb(skill.id, mb.id)}
                   >
-                    {done ? '✓ Marcado como leído' : 'Marcar como leído'}
+                    {done
+                      ? '✓ Marcado como leído'
+                      : (i < totalMb - 1 ? 'Leído — siguiente ▾' : 'Marcar como leído')}
                   </button>
                 </div>
               </div>
@@ -337,14 +425,57 @@ function AprendizajeView({ skill, allSkills, progress, mbAbiertos, onToggleMb, o
         )}
         onAnswer={(pregId, correcta) => onRespuestaMiniTest(skill.id, pregId, correcta)}
       />
+
+      {/* CTA: pasar a la práctica */}
+      <div className={`practica-cta ${teoriaCompleta ? 'ready' : ''}`}>
+        {totalMb === 0 ? (
+          <div className="practica-cta-sub">Este tema todavía no tiene teoría cargada.</div>
+        ) : teoriaCompleta ? (
+          <>
+            <div className="practica-cta-title">🎉 ¡Teoría completa!</div>
+            <div className="practica-cta-sub">
+              Leíste los {totalMb} microbloques{mtRespondidas === skill.miniTest.length ? ' y respondiste el mini-test' : ''}.
+              {numEjercicios > 0
+                ? ` Ahora afianzá lo aprendido con ${numEjercicios} ejercicio${numEjercicios === 1 ? '' : 's'}.`
+                : ' Todavía no hay ejercicios cargados para este tema.'}
+            </div>
+          </>
+        ) : (
+          <div className="practica-cta-sub">
+            Te {totalMb - leidos === 1 ? 'queda' : 'quedan'} {totalMb - leidos} microbloque{totalMb - leidos === 1 ? '' : 's'} por leer.
+            Igual podés practicar cuando quieras.
+          </div>
+        )}
+        <button
+          className="btn btn-primary practica-cta-btn"
+          onClick={() => onGoToPractice(skill.id)}
+        >
+          💻 Practicar ejercicios →
+        </button>
+      </div>
+
+      {/* Navegación entre temas */}
+      <div className="tema-nav">
+        {prevSkill ? (
+          <button className="btn btn-secondary" onClick={() => onSelectSkill(prevSkill.id)}>
+            ← {prevSkill.icono} {prevSkill.titulo}
+          </button>
+        ) : <span />}
+        {nextSkill && (
+          <button className="btn btn-secondary" onClick={() => onSelectSkill(nextSkill.id)}>
+            {nextSkill.icono} {nextSkill.titulo} →
+          </button>
+        )}
+      </div>
     </div>
   )
 }
 
 // ─── EJERCICIOS VIEW ────────────────────────────────────────────────────────
-function EjerciciosView({ skill, allSkills, ejercicios, progress, onDone, onSelectSkill }) {
+function EjerciciosView({ skill, allSkills, ejercicios, progress, onDone, onSelectSkill, onGoToTheory }) {
   const ejDeSkill = ejercicios.filter(e => e.subhabilidadId === skill.id)
   const ejDone = new Set(progress[skill.id]?.ejerciciosDone || [])
+  const hechos = ejDeSkill.filter(e => ejDone.has(e.id)).length
 
   return (
     <div>
@@ -369,7 +500,15 @@ function EjerciciosView({ skill, allSkills, ejercicios, progress, onDone, onSele
       </div>
 
       <div className="section-title">💻 Ejercicios — {skill.titulo}</div>
-      <div className="section-subtitle">Basados en la Práctica 4, 5 y 6 de la cátedra</div>
+      <div className="section-subtitle">
+        Basados en la Práctica 4, 5 y 6 de la cátedra · {hechos}/{ejDeSkill.length} resueltos
+      </div>
+
+      <div className="btn-row" style={{ marginBottom: '1.25rem' }}>
+        <button className="btn btn-secondary" onClick={() => onGoToTheory(skill.id)}>
+          ← 📖 Volver a la teoría
+        </button>
+      </div>
 
       {ejDeSkill.length === 0 ? (
         <div className="card"><p style={{ color: 'var(--text-muted)' }}>No hay ejercicios para esta sección todavía.</p></div>
