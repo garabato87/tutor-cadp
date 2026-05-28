@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { SUBHABILIDADES, EJERCICIOS } from './data/curriculum.js'
 import { PLAN_ESTUDIO } from './data/plan.js'
-import { loadProgress, saveProgress } from './lib/storage.js'
+import { loadProgress, saveProgress, getUserId, setUserId, clearUserId } from './lib/storage.js'
 import MiniTest from './components/MiniTest.jsx'
 import Ejercicio from './components/Ejercicio.jsx'
 
@@ -35,10 +35,27 @@ export default function App() {
   const [skillId, setSkillId] = useState(SUBHABILIDADES[0].id)
   const [progress, setProgress] = useState({})
   const [mbAbiertos, setMbAbiertos] = useState({})
+  const [userId, setUserIdState] = useState(getUserId())
 
   useEffect(() => {
+    if (!userId) return
     loadProgress().then(p => setProgress(p || {}))
-  }, [])
+  }, [userId])
+
+  function handleLogin(code) {
+    const id = setUserId(code)
+    if (id) setUserIdState(id)
+  }
+
+  function handleLogout() {
+    clearUserId()
+    setUserIdState(null)
+    setProgress({})
+  }
+
+  if (!userId) {
+    return <LoginView onLogin={handleLogin} />
+  }
 
   const guardar = useCallback((nuevo) => {
     setProgress(nuevo)
@@ -106,6 +123,9 @@ export default function App() {
           ))}
         </nav>
         {countdown && <div className="parcial-countdown">⏱ {countdown}</div>}
+        <button className="user-chip" onClick={handleLogout} title="Cambiar de código de usuario">
+          👤 {userId}
+        </button>
       </header>
 
       <div className="global-progress">
@@ -138,6 +158,45 @@ export default function App() {
         )}
         {tab === 'progreso' && <ProgresoView progress={progress} />}
       </main>
+    </div>
+  )
+}
+
+// ─── LOGIN VIEW ─────────────────────────────────────────────────────────────
+function LoginView({ onLogin }) {
+  const [code, setCode] = useState('')
+
+  function submit(e) {
+    e.preventDefault()
+    if (code.trim()) onLogin(code)
+  }
+
+  return (
+    <div className="login-shell">
+      <form className="login-card card" onSubmit={submit}>
+        <div className="topbar-brand" style={{ fontSize: '1.4rem', marginBottom: '0.5rem' }}>
+          Tutor CADP <span>Pascal — UNLP</span>
+        </div>
+        <div className="section-subtitle" style={{ marginBottom: '1.25rem' }}>
+          Escribí tu código de usuario para guardar y recuperar tu progreso desde
+          cualquier navegador o dispositivo.
+        </div>
+        <input
+          className="login-input"
+          type="text"
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          placeholder="ej: braian"
+          autoFocus
+          spellCheck={false}
+        />
+        <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '1rem' }}>
+          Entrar
+        </button>
+        <p className="login-hint">
+          Usá siempre el mismo código en todos tus navegadores para compartir el progreso.
+        </p>
+      </form>
     </div>
   )
 }
