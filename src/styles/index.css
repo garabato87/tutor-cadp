@@ -1,3 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── shadcn / Tailwind design tokens (mapeados a la marca CADP) ───────────── */
+@layer base {
+  :root, .dark {
+    --background: 225 21% 7%;
+    --foreground: 214 32% 91%;
+    --card: 226 20% 13%;
+    --card-foreground: 214 32% 91%;
+    --popover: 226 20% 13%;
+    --popover-foreground: 214 32% 91%;
+    --primary: 33 100% 64%;
+    --primary-foreground: 225 21% 7%;
+    --secondary: 230 26% 18%;
+    --secondary-foreground: 214 32% 91%;
+    --muted: 230 26% 18%;
+    --muted-foreground: 224 20% 61%;
+    --accent: 230 26% 18%;
+    --accent-foreground: 214 32% 91%;
+    --destructive: 0 91% 71%;
+    --destructive-foreground: 225 21% 7%;
+    --border: 229 22% 23%;
+    --input: 229 22% 23%;
+    --ring: 33 100% 64%;
+
+    /* Marca CADP (acentos por subhabilidad y estados) */
+    --brand-teal: 174 56% 56%;
+    --brand-success: 147 71% 67%;
+    --brand-warning: 33 100% 64%;
+    --brand-danger: 0 91% 71%;
+    --brand-grape: 270 95% 75%;
+
+    --radius: 0.625rem;
+  }
+
+  * {
+    border-color: hsl(var(--border));
+  }
+}
+
+/* ── Tokens legacy (clases CSS existentes: Aprender/Ejercicios/Login) ─────── */
 :root {
   --bg: #0f1117;
   --bg-2: #1a1d27;
@@ -14,7 +57,6 @@
   --font-sans: 'Fraunces', Georgia, serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
 
-  --radius: 10px;
   --radius-sm: 6px;
 }
 
