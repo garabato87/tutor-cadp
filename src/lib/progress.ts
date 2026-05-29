@@ -1,4 +1,3 @@
-// @ts-expect-error — data modules are plain JS (allowJs)
 import { SUBHABILIDADES, EJERCICIOS } from '@/data/curriculum.js'
 
 export interface SkillProgress {

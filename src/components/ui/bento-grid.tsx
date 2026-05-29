@@ -1,4 +1,4 @@
-import type { KeyboardEvent, ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
 export interface BentoItem {
@@ -25,35 +25,24 @@ interface BentoGridProps {
 }
 
 const statusToneClass: Record<NonNullable<BentoItem['statusTone']>, string> = {
-  default: 'bg-muted text-muted-foreground',
+  default: 'bg-muted text-foreground/90',
   success: 'bg-success/15 text-success',
   warning: 'bg-primary/15 text-primary',
-  danger: 'bg-destructive/15 text-destructive',
+  danger: 'bg-destructive/20 text-destructive',
   teal: 'bg-teal/15 text-teal',
 }
 
 function BentoGrid({ items, className }: BentoGridProps) {
   return (
     <div className={cn('grid grid-cols-1 gap-3 md:grid-cols-3', className)}>
-      {items.map((item, index) => {
+      {items.map((item) => {
         const interactive = typeof item.onClick === 'function'
         const accent = item.accent ?? 'var(--primary)'
-
-        const handleKey = (e: KeyboardEvent<HTMLDivElement>) => {
-          if (!interactive) return
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault()
-            item.onClick?.()
-          }
-        }
+        const accessibleName = item.cta ? `${item.cta.replace(/[→\s]+$/, '')}: ${item.title}` : item.title
 
         return (
-          <div
-            key={index}
-            role={interactive ? 'button' : undefined}
-            tabIndex={interactive ? 0 : undefined}
-            onClick={item.onClick}
-            onKeyDown={handleKey}
+          <article
+            key={item.title}
             style={{ ['--card-accent' as string]: `hsl(${accent})` }}
             className={cn(
               'group relative overflow-hidden rounded-xl border border-border bg-card p-4',
@@ -62,13 +51,15 @@ function BentoGrid({ items, className }: BentoGridProps) {
               'hover:-translate-y-0.5 hover:border-[color:var(--card-accent)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.35)]',
               'motion-reduce:hover:translate-y-0',
               interactive &&
-                'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--card-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+                'focus-within:ring-2 focus-within:ring-[color:var(--card-accent)] focus-within:ring-offset-2 focus-within:ring-offset-background',
               item.colSpan === 2 ? 'md:col-span-2' : 'col-span-1',
-              item.hasPersistentHover && '-translate-y-0.5 border-[color:var(--card-accent)]',
+              item.hasPersistentHover &&
+                'border-[color:var(--card-accent)] motion-safe:-translate-y-0.5',
             )}
           >
             {/* Patrón de puntos sutil al hover */}
             <div
+              aria-hidden
               className={cn(
                 'pointer-events-none absolute inset-0 transition-opacity duration-300',
                 item.hasPersistentHover ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
@@ -90,15 +81,19 @@ function BentoGrid({ items, className }: BentoGridProps) {
             <div className="relative flex flex-col gap-3">
               <div className="flex items-center justify-between">
                 <div
+                  aria-hidden
                   className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors duration-300"
-                  style={{ backgroundColor: 'color-mix(in oklab, var(--card-accent) 16%, transparent)', color: 'var(--card-accent)' }}
+                  style={{
+                    backgroundColor: 'color-mix(in oklab, var(--card-accent) 16%, transparent)',
+                    color: 'var(--card-accent)',
+                  }}
                 >
                   {item.icon}
                 </div>
                 {item.status && (
                   <span
                     className={cn(
-                      'rounded-lg px-2 py-1 font-mono text-[0.7rem] font-medium backdrop-blur-sm transition-colors duration-300',
+                      'rounded-lg px-2 py-1 font-mono text-[0.7rem] font-semibold backdrop-blur-sm transition-colors duration-300',
                       statusToneClass[item.statusTone ?? 'default'],
                     )}
                   >
@@ -134,14 +129,27 @@ function BentoGrid({ items, className }: BentoGridProps) {
                     ))}
                   </div>
                   {item.cta && (
-                    <span className="font-mono text-xs text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
+                    <span
+                      aria-hidden
+                      className="font-mono text-xs text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100"
+                    >
                       {item.cta}
                     </span>
                   )}
                 </div>
               )}
             </div>
-          </div>
+
+            {/* Botón overlay accesible: cubre la tarjeta sin anidar roles widget */}
+            {interactive && (
+              <button
+                type="button"
+                onClick={item.onClick}
+                aria-label={accessibleName}
+                className="absolute inset-0 z-10 rounded-xl focus:outline-none"
+              />
+            )}
+          </article>
         )
       })}
     </div>

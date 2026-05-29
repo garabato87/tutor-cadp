@@ -1,8 +1,6 @@
 import { Calendar, Trophy, type LucideProps } from 'lucide-react'
 import type { ComponentType } from 'react'
-// @ts-expect-error — data modules are plain JS (allowJs)
 import { SUBHABILIDADES } from '@/data/curriculum.js'
-// @ts-expect-error — data modules are plain JS (allowJs)
 import { PLAN_ESTUDIO } from '@/data/plan.js'
 import { getSkillMeta } from '@/lib/skillMeta'
 import { BentoGrid, type BentoItem } from '@/components/ui/bento-grid'
@@ -63,7 +61,7 @@ export function RoadmapView({ onSelectSkill }: RoadmapViewProps) {
   })
 
   return (
-    <div className="animate-fade-up space-y-4">
+    <div className="animate-fade-up space-y-4 motion-reduce:animate-none">
       <div>
         <h1 className="font-sans text-2xl font-semibold tracking-tight text-foreground">
           Plan de estudio

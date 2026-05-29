@@ -17,9 +17,10 @@ export function ProgressBar({ value, accent = 'var(--primary)', className, label
       aria-valuenow={pct}
       aria-valuemin={0}
       aria-valuemax={100}
-      aria-label={label}
+      aria-valuetext={`${pct}%`}
+      aria-label={label ?? 'Progreso'}
     >
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+      <div className="h-2 w-full overflow-hidden rounded-full border border-border bg-muted">
         <div
           className="h-full rounded-full transition-[width] duration-500 ease-out motion-reduce:transition-none"
           style={{ width: `${pct}%`, background: `hsl(${accent})` }}

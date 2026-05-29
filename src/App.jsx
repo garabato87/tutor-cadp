@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react'
+import { Home, CalendarDays, BookOpen, Code2, BarChart3, LogOut, Clock } from 'lucide-react'
 import { SUBHABILIDADES, EJERCICIOS } from './data/curriculum.js'
-import { PLAN_ESTUDIO } from './data/plan.js'
 import { loadProgress, saveProgress, getUserId, setUserId, clearUserId } from './lib/storage.js'
 import MiniTest from './components/MiniTest.jsx'
 import Ejercicio from './components/Ejercicio.jsx'
+import { DashboardView } from './components/views/DashboardView'
+import { RoadmapView } from './components/views/RoadmapView'
+import { ProgresoView } from './components/views/ProgresoView'
 
 const TODAY = '2026-06-13' // fecha del parcial como referencia
 
@@ -31,7 +34,7 @@ function calcularProgreso(progress) {
 }
 
 export default function App() {
-  const [tab, setTab] = useState('roadmap')
+  const [tab, setTab] = useState('inicio')
   const [skillId, setSkillId] = useState(SUBHABILIDADES[0].id)
   const [progress, setProgress] = useState({})
   const [mbAbiertos, setMbAbiertos] = useState({})
@@ -151,23 +154,28 @@ export default function App() {
         </div>
         <nav className="tab-nav">
           {[
-            { id: 'roadmap', label: '📅 Roadmap' },
-            { id: 'aprender', label: '📖 Aprender' },
-            { id: 'ejercicios', label: '💻 Ejercicios' },
-            { id: 'progreso', label: '📊 Progreso' },
+            { id: 'inicio', label: 'Inicio', Icon: Home },
+            { id: 'roadmap', label: 'Roadmap', Icon: CalendarDays },
+            { id: 'aprender', label: 'Aprender', Icon: BookOpen },
+            { id: 'ejercicios', label: 'Ejercicios', Icon: Code2 },
+            { id: 'progreso', label: 'Progreso', Icon: BarChart3 },
           ].map(t => (
             <button
               key={t.id}
               className={`tab-btn ${tab === t.id ? 'active' : ''}`}
               onClick={() => setTab(t.id)}
             >
-              {t.label}
+              <t.Icon className="tab-ico" aria-hidden /> {t.label}
             </button>
           ))}
         </nav>
-        {countdown && <div className="parcial-countdown">⏱ {countdown}</div>}
+        {countdown && (
+          <div className="parcial-countdown">
+            <Clock className="tab-ico" aria-hidden /> {countdown}
+          </div>
+        )}
         <button className="user-chip" onClick={handleLogout} title="Cambiar de código de usuario">
-          👤 {userId}
+          <LogOut className="tab-ico" aria-hidden /> {userId}
         </button>
       </header>
 
@@ -176,7 +184,16 @@ export default function App() {
       </div>
 
       <main className="main-content">
-        {tab === 'roadmap' && <RoadmapView progress={progress} onSelectSkill={(id) => { seleccionarSkillAprender(id); setTab('aprender') }} />}
+        {tab === 'inicio' && (
+          <DashboardView
+            progress={progress}
+            countdown={countdown}
+            onSelectSkill={(id) => { seleccionarSkillAprender(id); setTab('aprender') }}
+            onGoToPractice={irAPractica}
+            onOpenProgreso={() => setTab('progreso')}
+          />
+        )}
+        {tab === 'roadmap' && <RoadmapView onSelectSkill={(id) => { seleccionarSkillAprender(id); setTab('aprender') }} />}
         {tab === 'aprender' && (
           <AprendizajeView
             skill={skill}
@@ -202,7 +219,12 @@ export default function App() {
             onGoToTheory={(id) => { seleccionarSkillAprender(id); setTab('aprender') }}
           />
         )}
-        {tab === 'progreso' && <ProgresoView progress={progress} />}
+        {tab === 'progreso' && (
+          <ProgresoView
+            progress={progress}
+            onSelectSkill={(id) => { seleccionarSkillAprender(id); setTab('aprender') }}
+          />
+        )}
       </main>
     </div>
   )
@@ -243,67 +265,6 @@ function LoginView({ onLogin }) {
           Usá siempre el mismo código en todos tus navegadores para compartir el progreso.
         </p>
       </form>
-    </div>
-  )
-}
-
-// ─── ROADMAP VIEW ───────────────────────────────────────────────────────────
-function RoadmapView({ progress, onSelectSkill }) {
-  const hoy = new Date().toISOString().split('T')[0]
-  return (
-    <div>
-      <div className="section-title">Plan de estudio</div>
-      <div className="section-subtitle">29 de mayo → 13 de junio · segundo parcial CADP</div>
-
-      <div className="errores-banner">
-        <div className="errores-banner-title">⚠ ERRORES CLÁSICOS QUE PREGUNTA LA CÁTEDRA</div>
-        <ul className="errores-list">
-          <li>Invertir el orden del while en búsqueda: (not esta) and (pos &lt;= dL) — SIEMPRE (pos &lt;= dL) primero</li>
-          <li>Confundir dispose(p) con p := nil — dispose libera memoria, nil solo pierde la referencia</li>
-          <li>En insertar de arreglos usar "to" en vez de "downto" — se pisarían los valores</li>
-          <li>En eliminar de lista: no hacer dispose(actual) — la memoria no se libera</li>
-          <li>La tabla de bytes CAMBIA según el enunciado — siempre leer qué tabla da el problema</li>
-        </ul>
-      </div>
-
-      <div className="roadmap-grid">
-        {PLAN_ESTUDIO.map((dia) => {
-          const esHoy = dia.fecha === hoy
-          const esPasado = dia.fecha < hoy
-          const sk = dia.subhabilidadId
-            ? SUBHABILIDADES.find(s => s.id === dia.subhabilidadId)
-            : null
-
-          let cls = 'day-card'
-          if (dia.esParcial) cls += ' parcial'
-          else if (esHoy) cls += ' today'
-          else if (dia.descanso) cls += ' descanso'
-
-          return (
-            <div
-              key={dia.fecha}
-              className={cls}
-              onClick={() => sk && onSelectSkill(sk.id)}
-              style={!sk ? { cursor: 'default' } : {}}
-            >
-              <div className="day-card-date">{dia.dia}</div>
-              <div className="day-card-title" style={{ color: dia.esParcial ? 'var(--accent)' : undefined }}>
-                {dia.esParcial ? '🎯 Parcial CADP' : (sk ? `${sk.icono} ${sk.titulo}` : (dia.descanso ? '🌿 Descanso' : dia.temas[0]))}
-              </div>
-              <div className="day-card-tags">
-                {dia.temas.slice(0, 2).map((t, i) => (
-                  <span key={i} className="day-tag">{t}</span>
-                ))}
-              </div>
-              {esHoy && (
-                <div style={{ marginTop: '0.5rem', fontSize: '0.7rem', color: 'var(--accent)', fontFamily: 'var(--font-mono)' }}>
-                  ← HOY
-                </div>
-              )}
-            </div>
-          )
-        })}
-      </div>
     </div>
   )
 }
@@ -526,69 +487,3 @@ function EjerciciosView({ skill, allSkills, ejercicios, progress, onDone, onSele
   )
 }
 
-// ─── PROGRESO VIEW ──────────────────────────────────────────────────────────
-function ProgresoView({ progress }) {
-  const pctTotal = calcularProgreso(progress)
-
-  return (
-    <div>
-      <div className="section-title">📊 Mi progreso</div>
-      <div className="section-subtitle">Hacia el parcial del 13 de junio</div>
-
-      <div className="card" style={{ marginBottom: '1.5rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-          <span style={{ fontWeight: 600 }}>Progreso total</span>
-          <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent)', fontSize: '1.2rem' }}>{pctTotal}%</span>
-        </div>
-        <div className="progress-bar">
-          <div className="progress-bar-fill" style={{ width: `${pctTotal}%` }} />
-        </div>
-      </div>
-
-      <div className="progress-skills">
-        {SUBHABILIDADES.map(sk => {
-          const p = progress[sk.id] || {}
-          const ejsSkill = EJERCICIOS.filter(e => e.subhabilidadId === sk.id)
-          const mbDone = (p.microbloquesDone || []).length
-          const mtDone = Object.values(p.miniTestResults || {}).filter(Boolean).length
-          const ejDone = (p.ejerciciosDone || []).length
-          const total = sk.microbloques.length + sk.miniTest.length + ejsSkill.length
-          const done = mbDone + mtDone + ejDone
-          const pct = total > 0 ? Math.round((done / total) * 100) : 0
-
-          return (
-            <div key={sk.id} className="skill-progress-card">
-              <div className="skill-progress-header">
-                <span className="skill-progress-title">{sk.icono} {sk.titulo}</span>
-                <span className="skill-progress-pct">{pct}%</span>
-              </div>
-              <div className="progress-bar">
-                <div className="progress-bar-fill" style={{ width: `${pct}%`, background: sk.color }} />
-              </div>
-              <div className="progress-detail">
-                <span className="progress-detail-item">Teoría: <span>{mbDone}/{sk.microbloques.length}</span></span>
-                <span className="progress-detail-item">Mini-tests: <span>{mtDone}/{sk.miniTest.length}</span></span>
-                <span className="progress-detail-item">Ejercicios: <span>{ejDone}/{ejsSkill.length}</span></span>
-              </div>
-            </div>
-          )
-        })}
-      </div>
-
-      <div className="card" style={{ marginTop: '1.5rem' }}>
-        <div className="card-title" style={{ marginBottom: '0.75rem' }}>Recordá para el parcial</div>
-        <ul className="teoria-list">
-          <li>El while de búsqueda: SIEMPRE (pos &lt;= dL) antes que la condición de valor</li>
-          <li>insertar en arreglo: for DOWNTO (derecha a izquierda)</li>
-          <li>eliminar en arreglo: for TO (izquierda a derecha)</li>
-          <li>dispose(p) libera memoria. p := nil solo pierde la referencia</li>
-          <li>sizeof(puntero) = siempre 4. sizeof(puntero^) = tamaño del tipo apuntado</li>
-          <li>Recorrer lista: usar auxiliar (aux := pI), NUNCA avanzar con pri</li>
-          <li>Eliminar de lista: usar actual y ant. Casos: no está / es primero / no es primero</li>
-          <li>Insertar ordenado: casos 3 y 4 se unifican (en caso 4, actual = nil = correcto)</li>
-          <li>La tabla de bytes cambia entre enunciados — SIEMPRE leer la tabla que da el problema</li>
-        </ul>
-      </div>
-    </div>
-  )
-}
